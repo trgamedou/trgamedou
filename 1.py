@@ -1,4 +1,5 @@
 import csv
+import time
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -37,6 +38,7 @@ while current_date <= today:
         if formatted_date == '12-11-23' and (news_time == '10am' or news_time == '3pm'):
             continue
         response = requests.get(f'https://www.yews.news/edition/{formatted_date}-{news_time}')
+        time.sleep(0.5)
         soup = BeautifulSoup(response.content.decode('utf-8'))
         page_data = {
             'news_1' : {
