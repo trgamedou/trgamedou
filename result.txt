@@ -21,6 +21,11 @@
 }
 {
   matches: 1,
+  image: 'sportmixer-sportmixer-20-oz-200662',
+  matchedImages: [ 'B07GC9S8JM' ]
+}
+{
+  matches: 1,
   image: 'disney-princess-pro-series-disney-licensed-belle-this-beauty-trains-like-a-beast-895575',
   matchedImages: [ 'B09HBH5KXX' ]
 }
@@ -28,5 +33,10 @@
   matches: 1,
   image: 'sportmixer-sportmixer-20-oz-200662',
   matchedImages: [ 'B07GC9S8JM' ]
+}
+{
+  matches: 1,
+  image: 'disney-princess-pro-series-disney-licensed-belle-this-beauty-trains-like-a-beast-895575',
+  matchedImages: [ 'B09HBH5KXX' ]
 }
 @trgamedou ➜ /workspaces/trgamedou (main) $ 
