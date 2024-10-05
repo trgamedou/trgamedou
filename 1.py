@@ -1,37 +1,63 @@
-import cv2
+import atlite
+import cartopy.io.shapereader as shpreader
+import geopandas as gpd
+from shapely.geometry import box
+import pandas as pd
+import logging
+from argparse import ArgumentParser
 
-from ultralytics import YOLO, solutions
+def main(year):
+    
+    logging.basicConfig(level=logging.INFO)
 
-model = YOLO("yolo11x.pt")
-cap = cv2.VideoCapture("./day.avi")
-assert cap.isOpened(), "Error reading video file"
-w, h, fps = (int(cap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT, cv2.CAP_PROP_FPS))
+    world = gpd.read_file("./ne_110m_admin_0_countries.shp")
 
-# Define region points
-region_points = [(300, 150), (300, 200), (630, 200), (630, 150)]
+    # Drop uninhabited regions and Antarctica
+    world = world[(world.POP_EST > 0) & (world.NAME != "Antarctica")]
 
-# Video writer
-video_writer = cv2.VideoWriter("object_counting_output.avi", cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+    region = world
+    region_name = "world"
 
-# Init Object Counter
-counter = solutions.ObjectCounter(
-    view_img=False,
-    reg_pts=region_points,
-    names=model.names,
-    draw_tracks=True,
-    line_thickness=2,
-)
+    # Loop over the years
+    logging.info(f"Processing {year}")
 
-while cap.isOpened():
-    success, im0 = cap.read()
-    if not success:
-        print("Video frame is empty or video processing has been successfully completed.")
-        break
-    tracks = model.track(im0, persist=True, show=False)
+    # Define the cutout; this will not yet trigger any major operations
+    cutout = atlite.Cutout(
+        path=f"{region_name}-{year}_timeseries", module="era5", 
+        bounds=region.unary_union.bounds, 
+        time=f"{year}",
+        chunks={"time": 100,},)
+    # This is where all the work happens (this can take some time).
+    cutout.prepare(
+        compression={"zlib": True, "complevel": 9},
+        monthly_requests=True,
+        concurrent_requests=True)
 
-    im0 = counter.start_counting(im0, tracks)
-    video_writer.write(im0)
+    # Extract the wind power generation capacity factors
+    wind_power_generation = cutout.wind(
+        "Vestas_V112_3MW", 
+        capacity_factor_timeseries=True,
+        )
 
-cap.release()
-video_writer.release()
-cv2.destroyAllWindows()
+    # Extract the solar power generation capacity factors
+    solar_power_generation = cutout.pv(
+        panel="CSi", 
+        orientation='latitude_optimal', 
+        tracking="horizontal",
+        capacity_factor_timeseries=True,)
+    
+    # Extract the concenctrated solar power generation capacity factors
+    csp_power_generation = cutout.csp(
+        installation="SAM_parabolic_trough", 
+        capacity_factor_timeseries=True,)
+
+    # Save gridded data as netCDF files
+    wind_power_generation.to_netcdf(f"{region_name}_wind_CF_timeseries_{year}.nc")
+    solar_power_generation.to_netcdf(f"{region_name}_solar_CF_timeseries_{year}.nc")
+    csp_power_generation.to_netcdf(f"{region_name}_csp_CF_timeseries_{year}.nc")
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--year", type=int, help="Get data for this year")
+    args = parser.parse_args()
+    main(args.year)
