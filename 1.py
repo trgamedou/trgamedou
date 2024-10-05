@@ -10,7 +10,7 @@ def main(year):
     
     logging.basicConfig(level=logging.INFO)
 
-    world = gpd.read_file("./ne_110m_admin_0_countries.shp")
+    world = gpd.read_file("./data/ne_110m_admin_0_countries.shp")
 
     # Drop uninhabited regions and Antarctica
     world = world[(world.POP_EST > 0) & (world.NAME != "Antarctica")]
